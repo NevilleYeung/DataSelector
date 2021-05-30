@@ -121,6 +121,7 @@ public class ExcelData {
         for (int i = 1; i < rows; i++) {
             // 获取列数
             XSSFRow row = sheet.getRow(i);
+            if (row == null) continue;
             for (int j = 0; j < 2; j++) {
                 String cell = row.getCell(j).toString();
                 datas[i - 1][j] = Double.parseDouble(cell);

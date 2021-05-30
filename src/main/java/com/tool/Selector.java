@@ -3,6 +3,7 @@ package com.tool;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,9 +13,9 @@ import java.util.List;
  */
 public class Selector {
     // 位移增量，单位：mm（毫米）
-    private static final double DISPLACEMENT_INCREMENT = 0.01;
+    private static final BigDecimal DISPLACEMENT_INCREMENT = new BigDecimal( 0.01);
     // 压力增量，单位：N
-    private static final double PRESSURE_INCREMENT = 6;
+    private static final BigDecimal PRESSURE_INCREMENT = new BigDecimal( 6);
 
     private static final String SHEET_NAME = "Sheet1";
 
@@ -50,22 +51,22 @@ public class Selector {
 
                 // 从文件读取数据
                 double[][] inputDatas = sheet1.getData();
-                if (inputDatas == null || inputDatas.length < 2) {
-                    System.out.println("inputFile: " + inputFile + " 列数超过2");
+                if (inputDatas == null || inputDatas.length == 0) {
+                    System.out.println("inputFile: " + inputFile + " 数据是空");
                     return;
                 }
 
                 // 按要求过滤数据
-                List<Data> outputs = filterExcelData(inputDatas);
+                List<List<String>> contentsList = filterExcelData(inputDatas);
 
                 // 写入文件的内容
                 List<String> titleList = new ArrayList<String>();
                 titleList.add("位移");
                 titleList.add("压力");
-                List<List<String>> contentsList = new ArrayList<List<String>>();
-                for (Data data : outputs) {
-                    contentsList.add(Arrays.asList(String.valueOf(data.displacement), String.valueOf(data.pressure)));
-                }
+//                List<List<String>> contentsList = new ArrayList<List<String>>();
+//                for (Data data : contentsList) {
+//                    contentsList.add(Arrays.asList(String.valueOf(data.displacement), String.valueOf(data.pressure)));
+//                }
 
                 // 将挑选出来的数据，写入输出文件
                 String fileName = OUTPUT_DIR + inputFile;
@@ -100,24 +101,29 @@ public class Selector {
      * @param inputDatas inputDatas
      * @return 返回
      */
-    private static List<Data> filterExcelData(double[][] inputDatas) {
-        // 数据选取要求：位移增量大道0.01mm 或 压力增量达到6N
+    private static List<List<String>> filterExcelData(double[][] inputDatas) {
+        // 数据选取要求：位移增量达到0.01mm 或 压力增量达到6N
+        // 注意：与上一次符合条件的数据进行比较
         int left = 0;
         int right = left + 1;
-        List<Data> outputs = new ArrayList<Data>();
+        BigDecimal lastDis = BigDecimal.ZERO;
+        BigDecimal lastPres = BigDecimal.ZERO;
 
-        while (right < inputDatas.length) {
-            if ((inputDatas[right][0] - inputDatas[left][0] >= DISPLACEMENT_INCREMENT)
-                    || inputDatas[right][1] - inputDatas[left][1] >= PRESSURE_INCREMENT) {
-                //                System.out.println("index=" + right + ", dis inc=" + (inputDatas[right][0] - inputDatas[left][0]) + ", press inc =" + (inputDatas[right][1] - inputDatas[left][1]));
-                outputs.add(new Data(inputDatas[right][0], inputDatas[right][1]));
+        List<List<String>> contentsList = new ArrayList<List<String>>();
+
+        for (int i = 0; i < inputDatas.length; i++) {
+            BigDecimal tmpDis = BigDecimal.valueOf(inputDatas[i][0]);
+            BigDecimal tmpPres = BigDecimal.valueOf(inputDatas[i][1]);
+            int disInc = tmpDis.subtract(lastDis).abs().compareTo(DISPLACEMENT_INCREMENT);
+            int presInc = tmpPres.subtract(lastPres).abs().compareTo(PRESSURE_INCREMENT);
+            if (disInc >= 0 || presInc >= 0) {
+                contentsList.add(Arrays.asList(String.valueOf(inputDatas[i][0]), String.valueOf(inputDatas[i][1])));
+                lastDis = tmpDis;
+                lastPres = tmpPres;
             }
-
-            left++;
-            right++;
         }
 
-        return outputs;
+        return contentsList;
     }
 
     private static void writeData2excel(List<String> titleList, List<List<String>> contentsList, String fileName) {
