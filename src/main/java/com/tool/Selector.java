@@ -3,7 +3,6 @@ package com.tool;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.*;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,9 +12,9 @@ import java.util.List;
  */
 public class Selector {
     // 位移增量，单位：mm（毫米）
-    private static final BigDecimal DISPLACEMENT_INCREMENT = new BigDecimal( 0.01);
+    private static final double DISPLACEMENT_INCREMENT = 0.01d;
     // 压力增量，单位：N
-    private static final BigDecimal PRESSURE_INCREMENT = new BigDecimal( 6);
+    private static final double PRESSURE_INCREMENT = 6;
 
     private static final String SHEET_NAME = "Sheet1";
 
@@ -63,10 +62,6 @@ public class Selector {
                 List<String> titleList = new ArrayList<String>();
                 titleList.add("位移");
                 titleList.add("压力");
-//                List<List<String>> contentsList = new ArrayList<List<String>>();
-//                for (Data data : contentsList) {
-//                    contentsList.add(Arrays.asList(String.valueOf(data.displacement), String.valueOf(data.pressure)));
-//                }
 
                 // 将挑选出来的数据，写入输出文件
                 String fileName = OUTPUT_DIR + inputFile;
@@ -104,22 +99,18 @@ public class Selector {
     private static List<List<String>> filterExcelData(double[][] inputDatas) {
         // 数据选取要求：位移增量达到0.01mm 或 压力增量达到6N
         // 注意：与上一次符合条件的数据进行比较
-        int left = 0;
-        int right = left + 1;
-        BigDecimal lastDis = BigDecimal.ZERO;
-        BigDecimal lastPres = BigDecimal.ZERO;
-
+        double lastDis = 0;
+        double lastPres = 0;
         List<List<String>> contentsList = new ArrayList<List<String>>();
 
         for (int i = 0; i < inputDatas.length; i++) {
-            BigDecimal tmpDis = BigDecimal.valueOf(inputDatas[i][0]);
-            BigDecimal tmpPres = BigDecimal.valueOf(inputDatas[i][1]);
-            int disInc = tmpDis.subtract(lastDis).abs().compareTo(DISPLACEMENT_INCREMENT);
-            int presInc = tmpPres.subtract(lastPres).abs().compareTo(PRESSURE_INCREMENT);
-            if (disInc >= 0 || presInc >= 0) {
+            double disInc = Math.abs(inputDatas[i][0] - lastDis);
+            double presInc = Math.abs(inputDatas[i][1] - lastPres);
+            if (disInc >= DISPLACEMENT_INCREMENT || Math.abs(disInc - DISPLACEMENT_INCREMENT) <= 0.000001d
+                    || presInc >= PRESSURE_INCREMENT || Math.abs(presInc - PRESSURE_INCREMENT) <= 0.000001d) {
                 contentsList.add(Arrays.asList(String.valueOf(inputDatas[i][0]), String.valueOf(inputDatas[i][1])));
-                lastDis = tmpDis;
-                lastPres = tmpPres;
+                lastDis = inputDatas[i][0];
+                lastPres = inputDatas[i][1];
             }
         }
 
@@ -136,7 +127,7 @@ public class Selector {
             workBook.write(output);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             try {
